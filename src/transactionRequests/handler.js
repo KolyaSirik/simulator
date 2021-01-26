@@ -26,16 +26,20 @@
  ******/
 
 'use strict'
+const fs = require('fs');
 const NodeCache = require('node-cache')
 const sendRequest = require('../lib/sendRequest')
 const Logger = require('@mojaloop/central-services-logger')
 const Enums = require('@mojaloop/central-services-shared').Enum
 const ErrorHandler = require('@mojaloop/central-services-error-handling')
+const Sdk = require('@mojaloop/sdk-standard-components')
 
 const requestsCache = new NodeCache()
 const callbackCache = new NodeCache()
 const correlationCache = new NodeCache()
 const transactionRequestsEndpoint = process.env.TRANSACTION_REQUESTS_ENDPOINT || 'http://moja-transaction-requests-service'
+const jwsValidator = Sdk.Jws.validator;
+const validationKey = fs.readFileSync(__dirname + '/jwsValidationKey.pem');
 
 exports.getTransactionRequestById = function (request, h) {
   (async () => {
@@ -94,6 +98,16 @@ exports.postTransactionRequest = function (request, h) {
     Logger.isInfoEnabled && Logger.info(`IN transactionRequests POST:: received: ${metadata}.`)
     const url = transactionRequestsEndpoint + '/transactionRequests/' + request.payload.transactionRequestId
     try {
+      const validator = new jwsValidator({
+        validationKeys: {
+          'mmo1fsp': validationKey
+        },
+      });
+      validator.validate({
+        headers: request.headers,
+        body: request.payload,
+      });
+
       if (requestsCache.get(request.payload.transactionRequestId)) {
         await sendErrorCallback(
           ErrorHandler.CreateFSPIOPError(ErrorHandler.Enums.FSPIOPErrorCodes.CLIENT_ERROR, `ID:${request.payload.transactionRequestId} already exists`, null, request.headers['fspiop-source']),

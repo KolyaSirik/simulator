@@ -6,7 +6,7 @@ services:
       context: .
     container_name: simulator
     ports:
-      - "8444:8444"
+      - "8446:8444"
     environment:
       - LOG_LEVEL=info
       - TRANSFERS_ENDPOINT=http://172.17.0.1:3000
