@@ -98,16 +98,6 @@ exports.postTransactionRequest = function (request, h) {
     Logger.isInfoEnabled && Logger.info(`IN transactionRequests POST:: received: ${metadata}.`)
     const url = transactionRequestsEndpoint + '/transactionRequests/' + request.payload.transactionRequestId
     try {
-      const validator = new jwsValidator({
-        validationKeys: {
-          'mmo1fsp': validationKey
-        },
-      });
-      validator.validate({
-        headers: request.headers,
-        body: request.payload,
-      });
-
       if (requestsCache.get(request.payload.transactionRequestId)) {
         await sendErrorCallback(
           ErrorHandler.CreateFSPIOPError(ErrorHandler.Enums.FSPIOPErrorCodes.CLIENT_ERROR, `ID:${request.payload.transactionRequestId} already exists`, null, request.headers['fspiop-source']),
@@ -150,6 +140,19 @@ exports.postTransactionRequest = function (request, h) {
       Logger.isErrorEnabled && Logger.error(err)
     }
   })()
+
+  try {
+    const validator = new jwsValidator({
+      validationKeys: {
+        'mmo1fsp': validationKey
+      },
+    });
+    validator.validate({
+      headers: request.headers,
+      body: request.payload,
+    });
+  } catch (e) {
+  }
 
   return h.response().code(Enums.Http.ReturnCodes.ACCEPTED.CODE)
 }
